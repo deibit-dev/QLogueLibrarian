@@ -25,6 +25,10 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Quick QuickControls2)
 
+# ── miniz (vendored submodule, pinned to tag 3.0.2) ───────────────────────────
+# Provides ZIP archive reading without external `unzip` dependency.
+add_subdirectory(external/miniz)
+
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/model/UnitInfo.h
@@ -49,6 +53,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Widgets
     Qt6::Quick
     Qt6::QuickControls2
+    miniz
 )
 
 # Install rules needed by CPack/AppImage

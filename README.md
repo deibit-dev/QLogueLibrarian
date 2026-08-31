@@ -20,7 +20,7 @@ A minimal cross-platform GUI wrapper for KORG logue-sdk/logue-cli tools, built w
 | **Probe MIDI ports** | Runs `logue-cli probe -l`, parses the output and populates In/Out port selectors. Ports containing `SOUND` are auto-selected (these are the correct SysEx ports for prologue / minilogue xd). |
 | **Upload unit files** | Lets you browse for a `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (or other logue unit format), then runs `logue-cli load -u <file> -i <in> -o <out>`. Parses the output to determine success (platform, module, CRC32). |
 | **Plugin Library browser** | Point the app at a directory containing `.xxxunit` files. All plugins are listed and selecting one displays its metadata and automatically fills the Load Unit path for quick upload. |
-| **Manifest metadata parsing** | Unit files (`.prlgunit`, `.mnlgxdunit`, etc.) are ZIP archives containing a `manifest.json`. The app extracts it via `unzip -p` and displays: platform, module, API version, developer/program IDs, unit name, and a full parameter table (name, min, max, type). |
+| **Manifest metadata parsing** | Unit files (`.prlgunit`, `.mnlgxdunit`, etc.) are ZIP archives containing a `manifest.json`. The app extracts it via the bundled **miniz** library (vendored as a git submodule) and displays: platform, module, API version, developer/program IDs, unit name, and a full parameter table (name, min, max, type). |
 | **Persistent settings** | The path to the `logue-cli` executable and the plugin library directory are saved via `QSettings` and restored on next launch. The plugin directory is automatically scanned on startup. |
 | **Live log** | All `logue-cli` stdout/stderr output is shown in a log panel inside the application. |
 
@@ -55,12 +55,23 @@ src/
 | CMake | 3.20 |
 | GCC (or Clang) | GCC 9+ / Clang 10+ (C++17) |
 | Qt6 (Core, Quick, QuickControls2) | 6.2 |
+| **miniz** | Vendored as git submodule (`external/miniz`, pinned to tag `3.0.2`) |
+
+> **Note:** this project uses a git submodule. Clone it with:
+
+> ```bash
+> git clone --recurse-submodules https://github.com/<you>/QLogueLibrarian.git
+> ```
+
+> Or, if you already cloned it without submodules:
+
+> ```bash
+> git submodule update --init --recursive
+> ```
 
 ### Runtime Dependencies
 
-| Package | Purpose |
-|---|---|
-| `unzip` | Used to extract `manifest.json` from `.xxxunit` ZIP archives. Pre-installed on most Linux distros. |
+The only runtime dependency is `logue-cli` itself (see below). The **miniz** library used to read `.xxxunit` ZIP archives is vendored in this repository and compiled into the application, so no external ZIP/unzip tool is required.
 
 **Debian / Ubuntu:**
 
@@ -154,7 +165,7 @@ Interfaz gráfica minimalista y multiplataforma que actúa como wrapper de las h
 | **Detección de puertos MIDI** | Ejecuta `logue-cli probe -l`, parsea la salida y llena los selectores de puertos In/Out. Los puertos que contienen `SOUND` se seleccionan automáticamente (son los puertos SysEx correctos para prologue / minilogue xd). |
 | **Subida de archivos unit** | Permite seleccionar un archivo `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (u otro formato logue), luego ejecuta `logue-cli load -u <archivo> -i <in> -o <out>`. Parsea la salida para determinar éxito (plataforma, módulo, CRC32). |
 | **Explorador de librería de plugins** | Apuntá la app a un directorio que contenga archivos `.xxxunit`. Todos los plugins se listan y al seleccionar uno se muestran sus metadatos y se autocompleta la ruta en Load Unit para subirlo rápidamente. |
-| **Parseo de metadatos (manifest.json)** | Los archivos unit (`.prlgunit`, `.mnlgxdunit`, etc.) son archivos ZIP que contienen un `manifest.json`. La app lo extrae vía `unzip -p` y muestra: plataforma, módulo, versión de API, IDs de desarrollador/programa, nombre de la unidad, y tabla completa de parámetros (nombre, mín, máx, tipo). |
+| **Parseo de metadatos (manifest.json)** | Los archivos unit (`.prlgunit`, `.mnlgxdunit`, etc.) son archivos ZIP que contienen un `manifest.json`. La app lo extrae con la librería **miniz** (incluida como git submodule) y muestra: plataforma, módulo, versión de API, IDs de desarrollador/programa, nombre de la unidad, y tabla completa de parámetros (nombre, mín, máx, tipo). |
 | **Configuración persistente** | La ruta al ejecutable `logue-cli` y el directorio de la librería de plugins se guardan con `QSettings` y se restauran al reiniciar. El directorio de plugins se escanea automáticamente al iniciar. |
 | **Log en vivo** | Toda la salida stdout/stderr de `logue-cli` se muestra en un panel de log dentro de la aplicación. |
 
@@ -189,12 +200,23 @@ src/
 | CMake | 3.20 |
 | GCC (o Clang) | GCC 9+ / Clang 10+ (C++17) |
 | Qt6 (Core, Quick, QuickControls2) | 6.2 |
+| **miniz** | Vendido como git submodule (`external/miniz`, fijado al tag `3.0.2`) |
+
+> **Nota:** este proyecto usa un git submodule. Clonalo con:
+
+> ```bash
+> git clone --recurse-submodules https://github.com/<usuario>/QLogueLibrarian.git
+> ```
+
+> O, si ya lo clonaste sin submodules:
+
+> ```bash
+> git submodule update --init --recursive
+> ```
 
 ### Dependencias de Ejecución
 
-| Paquete | Propósito |
-|---|---|
-| `unzip` | Se usa para extraer `manifest.json` de los archivos ZIP `.xxxunit`. Viene preinstalado en la mayoría de las distros Linux. |
+La única dependencia de ejecución es `logue-cli` (ver abajo). La librería **miniz**, usada para leer los ZIP `.xxxunit`, está **incluida** en este repositorio y se compila dentro de la aplicación — no se requiere ninguna herramienta externa de ZIP/unzip.
 
 **Debian / Ubuntu:**
 
