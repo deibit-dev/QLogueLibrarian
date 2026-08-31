@@ -51,6 +51,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::QuickControls2
 )
 
+# Install rules needed by CPack/AppImage
+install(TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION bin
+)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION share/doc/${PROJECT_NAME})
+
+# NOTE: AppImage is NOT a built-in CPack generator (not in `cpack -G` list).
+# AppImages are built with linuxdeploy + linuxdeploy-plugin-qt — see build-appimage.sh.
+
 # GCC/Clang static runtime (applied after target exists)
 if(BUILD_STATIC AND NOT MSVC)
     target_link_options(${PROJECT_NAME} PRIVATE
