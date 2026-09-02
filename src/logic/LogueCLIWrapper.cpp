@@ -8,13 +8,9 @@ namespace qlogue {
 LogueCLIWrapper::LogueCLIWrapper(QObject *parent)
     : QObject(parent) {}
 
-void LogueCLIWrapper::setCliPath(const QString &path) {
-    m_cliPath = path;
-}
-
 // ── probe -l ────────────────────────────────────────────────────────────────
 
-void LogueCLIWrapper::probe() {
+void LogueCLIWrapper::probe(const QString &cliPath) {
     auto *proc = new QProcess(this);
     connect(proc, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
             this, [this, proc](int exitCode, QProcess::ExitStatus) {
@@ -29,7 +25,7 @@ void LogueCLIWrapper::probe() {
         }
         proc->deleteLater();
     });
-    proc->start(m_cliPath, {QStringLiteral("probe"), QStringLiteral("-l")});
+    proc->start(cliPath, {QStringLiteral("probe"), QStringLiteral("-l")});
 }
 
 /*  Expected output:
@@ -64,7 +60,7 @@ QVector<MidiPort> LogueCLIWrapper::parseProbeOutput(const QString &text) {
 
 // ── load ────────────────────────────────────────────────────────────────────
 
-void LogueCLIWrapper::loadUnit(const QString &unitPath,
+void LogueCLIWrapper::loadUnit(const QString &cliPath, const QString &unitPath,
                                int inPort, int outPort, int slot) {
     auto *proc = new QProcess(this);
     connect(proc, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
@@ -82,7 +78,7 @@ void LogueCLIWrapper::loadUnit(const QString &unitPath,
     if (slot >= 0)
         args << QStringLiteral("-s") << QString::number(slot);
 
-    proc->start(m_cliPath, args);
+    proc->start(cliPath, args);
 }
 
 /*  Expected output (success):

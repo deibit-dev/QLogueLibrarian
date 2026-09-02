@@ -1,0 +1,210 @@
+/*
+ * QLogueLibrarian — Class diagram (Graphviz DOT), MVC adaptado a QML.
+ * Render with: dot -Tsvg docs/clases.dot -o clases.svg
+ *              dot -Tpng docs/clases.dot -o clases.png
+ *              dot -Tpdf docs/clases.dot -o clases.pdf
+ * Or import directly into Draw.io / Inkscape (via SVG export).
+ */
+
+digraph QLogueLibrarian {
+    rankdir=LR;
+    splines=line;
+    nodesep=0.55;
+    ranksep=0.8;
+    fontname="Helvetica";
+    node [fontname="Helvetica" fontsize=10];
+    edge [fontname="Helvetica" fontsize=9];
+
+    node [shape=plaintext];
+
+    // ── main.cpp ───────────────────────────────────────────────────────
+    Main [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6">
+        <TR><TD BGCOLOR="#222831"><FONT COLOR="white"><B>main.cpp</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">qmlRegisterUncreatableMetaObject<BR ALIGN="LEFT"/>
+            &#8194;&#8194;UnitInfo / UnitParam (value types)<BR ALIGN="LEFT"/>
+            Logic logic<BR ALIGN="LEFT"/>
+            AppController controller(&amp;logic)<BR ALIGN="LEFT"/>
+            ViewState viewState<BR ALIGN="LEFT"/>
+            Dialogs dialogs<BR ALIGN="LEFT"/>
+            setContextProperty("App", "Controller",<BR ALIGN="LEFT"/>
+            &#8194;&#8194;"ViewState", "Dialogs")<BR ALIGN="LEFT"/>
+            engine.load("qrc:/qml/Main.qml")</TD></TR>
+    </TABLE> >];
+
+    // ── Logic (Model + orquestador) ────────────────────────────────────
+    Logic [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#2E86AB"><FONT COLOR="white"><B>Logic</B> <FONT POINT-SIZE="9">(Model + orquestador)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>properties (7)</B> — read-only para QML<BR ALIGN="LEFT"/>
+            cliPath, unitDir<BR ALIGN="LEFT"/>
+            inPorts, outPorts<BR ALIGN="LEFT"/>
+            library<BR ALIGN="LEFT"/>
+            statusText, logText</TD></TR>
+        <TR><TD ALIGN="LEFT"><B>signals</B><BR ALIGN="LEFT"/>
+            7× NOTIFY (por propiedad)<BR ALIGN="LEFT"/>
+            op: probeFinished(int), scanFinished(int)<BR ALIGN="LEFT"/>
+            &#8194;&#8194;loadFinished(LoadResult), errorOccurred(QString)</TD></TR>
+        <TR><TD ALIGN="LEFT"><B>operaciones (no Q_INVOKABLE)</B><BR ALIGN="LEFT"/>
+            probe()<BR ALIGN="LEFT"/>
+            loadUnit(unitPath, slot, inRow, outRow)<BR ALIGN="LEFT"/>
+            scanUnits(dir) / setUnitDir(dir)<BR ALIGN="LEFT"/>
+            setCliPath(path)<BR ALIGN="LEFT"/>
+            appendLog() / setStatus() (feedback)</TD></TR>
+        <TR><TD ALIGN="LEFT"><B>members</B><BR ALIGN="LEFT"/>
+            m_cli : LogueCLIWrapper (owned)<BR ALIGN="LEFT"/>
+            m_inPorts / m_outPorts : QVector&lt;MidiPort&gt;<BR ALIGN="LEFT"/>
+            m_units : QVector&lt;UnitInfo&gt; (única fuente)<BR ALIGN="LEFT"/>
+            m_cliPath / m_unitDir / status / log<BR ALIGN="LEFT"/>
+            QSettings (inline)</TD></TR>
+    </TABLE> >];
+
+    // ── ViewState (view state) ─────────────────────────────────────────
+    ViewState [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#9B5DE5"><FONT COLOR="white"><B>ViewState</B> <FONT POINT-SIZE="9">(view state)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><B>presentation state (6)</B><BR ALIGN="LEFT"/>
+            libraryIndex : int<BR ALIGN="LEFT"/>
+            unitPath : QString<BR ALIGN="LEFT"/>
+            inIndex / outIndex : int<BR ALIGN="LEFT"/>
+            slot : int<BR ALIGN="LEFT"/>
+            canLoad : bool (derived)</TD></TR>
+        <TR><TD ALIGN="LEFT"><FONT COLOR="gray">owns selection / form values<BR ALIGN="LEFT"/>
+            no domain data</FONT></TD></TR>
+    </TABLE> >];
+
+    // ── AppController (gateway QML) ────────────────────────────────────
+    AppController [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#30475E"><FONT COLOR="white"><B>AppController</B> <FONT POINT-SIZE="9">(gateway QML)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ probe() {invokable}<BR ALIGN="LEFT"/>
+            + setCliPath(path) {invokable}<BR ALIGN="LEFT"/>
+            + setUnitDir(dir) {invokable}<BR ALIGN="LEFT"/>
+            + loadUnit(unitPath, slot,<BR ALIGN="LEFT"/>
+              &#8194;inRow, outRow) {invokable}</TD></TR>
+        <TR><TD ALIGN="LEFT"><B>role</B><BR ALIGN="LEFT"/>
+            único camino QML→modelo<BR ALIGN="LEFT"/>
+            valida + delega en Logic<BR ALIGN="LEFT"/>
+            traduce señales de Logic a<BR ALIGN="LEFT"/>
+            status/log (vía setters de Logic)<BR ALIGN="LEFT"/>
+            - m_logic : Logic*</TD></TR>
+    </TABLE> >];
+
+    // ── LogueCLIWrapper (service) ──────────────────────────────────────
+    LogueCLIWrapper [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#30475E"><FONT COLOR="white"><B>LogueCLIWrapper</B> <FONT POINT-SIZE="9">(service)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ probe(QString cliPath)<BR ALIGN="LEFT"/>
+            + loadUnit(cliPath, unitPath,<BR ALIGN="LEFT"/>
+              in, out, slot = -1)</TD></TR>
+        <TR><TD ALIGN="LEFT">~ probeFinished(QVector&lt;MidiPort&gt;)<BR ALIGN="LEFT"/>
+            ~ loadFinished(LoadResult)<BR ALIGN="LEFT"/>
+            ~ errorOccurred(QString)</TD></TR>
+        <TR><TD ALIGN="LEFT">- QProcess (used inline)<BR ALIGN="LEFT"/>
+            <FONT COLOR="gray">stateless, async</FONT></TD></TR>
+    </TABLE> >];
+
+    // ── UnitHeaderParser ───────────────────────────────────────────────
+    UnitHeaderParser [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#30475E"><FONT COLOR="white"><B>UnitHeaderParser</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ parse(QString) : UnitInfo<BR ALIGN="LEFT"/>
+            <FONT COLOR="gray">  (static; non-instantiable)</FONT></TD></TR>
+    </TABLE> >];
+
+    // ── Dialogs (view helper) ──────────────────────────────────────────
+    Dialogs [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#9B5DE5"><FONT COLOR="white"><B>Dialogs</B> <FONT POINT-SIZE="9">(view helper)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ pickExecutable() : QString<BR ALIGN="LEFT"/>
+            + pickUnitFile() : QString<BR ALIGN="LEFT"/>
+            + pickDirectory(startDir = {}) : QString</TD></TR>
+        <TR><TD ALIGN="LEFT"><FONT COLOR="gray">QFileDialog (used inline)<BR ALIGN="LEFT"/>
+            no state</FONT></TD></TR>
+    </TABLE> >];
+
+    // ── Value types / structs ──────────────────────────────────────────
+    UnitInfo [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#7FB069"><FONT COLOR="white"><B>UnitInfo</B> <FONT POINT-SIZE="9">(value type, Q_GADGET)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ filePath, fileName<BR ALIGN="LEFT"/>
+            + platform, module, api<BR ALIGN="LEFT"/>
+            + devId, prgId, version<BR ALIGN="LEFT"/>
+            + name, numParams<BR ALIGN="LEFT"/>
+            + params : QVariantList (projected)<BR ALIGN="LEFT"/>
+            + isValid : bool<BR ALIGN="LEFT"/>
+            <FONT COLOR="gray">private fields + const getters</FONT></TD></TR>
+    </TABLE> >];
+
+    UnitParam [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#7FB069"><FONT COLOR="white"><B>UnitParam</B> <FONT POINT-SIZE="9">(value type, Q_GADGET)</FONT></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ name : QString<BR ALIGN="LEFT"/>
+            + min, max : int<BR ALIGN="LEFT"/>
+            + type : QString</TD></TR>
+    </TABLE> >];
+
+    MidiPort [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#7FB069"><FONT COLOR="white"><B>MidiPort (struct)</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">enum Direction { In, Out }<BR ALIGN="LEFT"/>
+            + direction : Direction<BR ALIGN="LEFT"/>
+            + index : int<BR ALIGN="LEFT"/>
+            + name : QString</TD></TR>
+    </TABLE> >];
+
+    LoadResult [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#7FB069"><FONT COLOR="white"><B>LoadResult (struct)</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">+ success : bool<BR ALIGN="LEFT"/>
+            + platform, module : QString<BR ALIGN="LEFT"/>
+            + rawOutput : QString</TD></TR>
+    </TABLE> >];
+
+    // ── QML view ───────────────────────────────────────────────────────
+    QMLView [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#9B5DE5"><FONT COLOR="white"><B>qml/ (QML view)</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT">Main.qml<BR ALIGN="LEFT"/>
+            &#9492;&#9472; MidiSection.qml<BR ALIGN="LEFT"/>
+            &#9492;&#9472; LoadSection.qml<BR ALIGN="LEFT"/>
+            &#9492;&#9472; UnitLibrary.qml<BR ALIGN="LEFT"/>
+            &#8194;&#8194;&#8194;&#9472;&#9472; MetaPanel.qml<BR ALIGN="LEFT"/>
+            &#9492;&#9472; LogPanel.qml</TD></TR>
+    </TABLE> >];
+
+    // ── External ───────────────────────────────────────────────────────
+    Miniz [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#F26430"><FONT COLOR="white"><B>miniz</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><FONT COLOR="gray">submodule (tag 3.0.2)<BR ALIGN="LEFT"/>
+            static library, ZIP read</FONT></TD></TR>
+    </TABLE> >];
+
+    LogueCLI [label=< <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="5">
+        <TR><TD BGCOLOR="#F26430"><FONT COLOR="white"><B>logue-cli (external)</B></FONT></TD></TR>
+        <TR><TD ALIGN="LEFT"><FONT COLOR="gray">KORG binary, not bundled<BR ALIGN="LEFT"/>
+            QProcess spawns it</FONT></TD></TR>
+    </TABLE> >];
+
+    // ── Relationships ──────────────────────────────────────────────────
+    Main -> Logic          [label="creates / 'App'"];
+    Main -> AppController  [label="creates / 'Controller'"];
+    Main -> ViewState      [label="creates / 'ViewState'"];
+    Main -> Dialogs        [label="creates / 'Dialogs'"];
+    Main -> UnitInfo       [label="registers value types", style=dotted];
+    Main -> UnitParam      [label="registers value types", style=dotted];
+
+    AppController -> Logic          [label="delega / traduce", style=bold, color="#2E86AB"];
+    Logic -> LogueCLIWrapper        [label="owns (m_cli)", style=bold];
+    Logic -> UnitHeaderParser       [label="uses (scan)", style=dashed];
+
+    LogueCLIWrapper -> LogueCLI    [label="QProcess spawns", style=dashed, color="#F26430"];
+    LogueCLIWrapper -> MidiPort    [label="emits QVector<>"];
+    LogueCLIWrapper -> LoadResult  [label="emits"];
+
+    UnitHeaderParser -> UnitInfo   [label="returns"];
+    UnitHeaderParser -> Miniz      [label="uses (ZIP read)", style=dashed];
+
+    Logic -> MidiPort    [label="holds QVector<>"];
+    Logic -> UnitInfo    [label="holds QVector<>"];
+    UnitInfo  -> UnitParam  [label="params: QVector<>"];
+
+    QMLView -> Logic         [label="binds (App, read-only)", style=dashed, color="#9B5DE5"];
+    QMLView -> ViewState     [label="reads / writes selection", style=dashed, color="#9B5DE5"];
+    QMLView -> AppController [label="calls with args (Controller)", style=dashed, color="#9B5DE5"];
+    QMLView -> Dialogs       [label="calls (Dialogs)", style=dashed, color="#9B5DE5"];
+
+    // Layout
+    { rank=same; Main; Logic; }
+    { rank=same; AppController; LogueCLIWrapper; UnitHeaderParser; Dialogs; ViewState; }
+    { rank=same; UnitInfo; UnitParam; MidiPort; LoadResult; }
+    { rank=same; Miniz; LogueCLI; QMLView; }
+}

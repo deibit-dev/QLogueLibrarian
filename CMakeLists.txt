@@ -33,14 +33,20 @@ add_executable(${PROJECT_NAME}
     src/main.cpp
     src/model/UnitInfo.h
     src/model/UnitInfo.cpp
-    src/model/PluginListModel.h
-    src/model/PluginListModel.cpp
-    src/controller/LogueCLIWrapper.h
-    src/controller/LogueCLIWrapper.cpp
-    src/controller/UnitHeaderParser.h
-    src/controller/UnitHeaderParser.cpp
+    src/model/MidiPort.h
+    src/model/KorgEnums.h
+    src/logic/Logic.h
+    src/logic/Logic.cpp
+    src/logic/LogueCLIWrapper.h
+    src/logic/LogueCLIWrapper.cpp
+    src/logic/UnitHeaderParser.h
+    src/logic/UnitHeaderParser.cpp
     src/controller/AppController.h
     src/controller/AppController.cpp
+    src/view/Dialogs.h
+    src/view/Dialogs.cpp
+    src/view/ViewState.h
+    src/view/ViewState.cpp
     resources.qrc
 )
 

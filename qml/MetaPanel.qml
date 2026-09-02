@@ -5,6 +5,16 @@ import QtQuick.Layouts
 Pane {
     id: metaRoot
 
+    // The inspected unit is derived from the view's current library selection.
+    // Reading App.library[i] keeps the model as the single source of truth:
+    // nothing is copied into the model or this panel.
+    property var unit: {
+        var i = ViewState.libraryIndex
+        if (i < 0 || i >= App.library.length)
+            return null
+        return App.library[i]
+    }
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 4
@@ -16,28 +26,34 @@ Pane {
             Layout.fillWidth: true
 
             Label { text: "Name:";     font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaName;     Layout.fillWidth: true; wrapMode: Text.Wrap }
+            Label {
+                Layout.fillWidth: true; wrapMode: Text.Wrap
+                text: metaRoot.unit
+                      ? (metaRoot.unit.name.trim() !== ""
+                         ? metaRoot.unit.name.trim() : metaRoot.unit.fileName)
+                      : "—"
+            }
 
             Label { text: "Platform:"; font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaPlatform; Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.platform : "—"; Layout.fillWidth: true }
 
             Label { text: "Module:";   font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaModule;   Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.module : "—";   Layout.fillWidth: true }
 
             Label { text: "Version:";  font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaVersion;  Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.version : "—";  Layout.fillWidth: true }
 
             Label { text: "API:";      font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaApi;      Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.api : "—";      Layout.fillWidth: true }
 
             Label { text: "Dev ID:";   font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaDevId;    Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.devId : "—";    Layout.fillWidth: true }
 
             Label { text: "Prg ID:";   font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaPrgId;    Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.prgId : "—";    Layout.fillWidth: true }
 
             Label { text: "Params:";   font.bold: true; Layout.alignment: Qt.AlignRight }
-            Label { text: App.metaNumParams; Layout.fillWidth: true }
+            Label { text: metaRoot.unit ? metaRoot.unit.numParams : "—"; Layout.fillWidth: true }
         }
 
         // ── Parameter table ──────────────────────────────────────────
@@ -78,7 +94,7 @@ Pane {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    model: App.metaParams
+                    model: metaRoot.unit ? metaRoot.unit.params : []
 
                     delegate: Rectangle {
                         width: ListView.view.width

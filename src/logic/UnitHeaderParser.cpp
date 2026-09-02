@@ -14,15 +14,15 @@ namespace qlogue {
 UnitInfo UnitHeaderParser::parse(const QString &filePath)
 {
     UnitInfo info;
-    info.filePath = filePath;
-    info.fileName = QFileInfo(filePath).fileName();
+    info.setFilePath(filePath);
+    info.setFileName(QFileInfo(filePath).fileName());
 
     // ── Open ZIP archive via miniz ────────────────────────────────────
     const QByteArray pathUtf8 = filePath.toUtf8();
     mz_zip_archive zip;
     mz_zip_zero_struct(&zip);
     if (!mz_zip_reader_init_file(&zip, pathUtf8.constData(), 0)) {
-        info.isValid = false;
+        info.setValid(false);
         return info;
     }
 
@@ -54,7 +54,7 @@ UnitInfo UnitHeaderParser::parse(const QString &filePath)
         }
         if (!data) {
             mz_zip_reader_end(&zip);
-            info.isValid = false;
+            info.setValid(false);
             return info;
         }
 
@@ -68,7 +68,7 @@ UnitInfo UnitHeaderParser::parse(const QString &filePath)
     mz_zip_reader_end(&zip);
 
     if (!found || manifestBytes.isEmpty()) {
-        info.isValid = false;
+        info.setValid(false);
         return info;
     }
 
@@ -76,26 +76,26 @@ UnitInfo UnitHeaderParser::parse(const QString &filePath)
     QJsonParseError err;
     const QJsonDocument doc = QJsonDocument::fromJson(manifestBytes, &err);
     if (doc.isNull()) {
-        info.isValid = false;
+        info.setValid(false);
         return info;
     }
 
     const QJsonObject header = doc.object()
                                    .value(QStringLiteral("header")).toObject();
     if (header.isEmpty()) {
-        info.isValid = false;
+        info.setValid(false);
         return info;
     }
 
     // ── Populate UnitInfo ───────────────────────────────────────────────
-    info.platform  = header.value(QStringLiteral("platform")).toString();
-    info.module    = header.value(QStringLiteral("module")).toString();
-    info.api       = header.value(QStringLiteral("api")).toString();
-    info.devId     = header.value(QStringLiteral("dev_id")).toInt();
-    info.prgId     = header.value(QStringLiteral("prg_id")).toInt();
-    info.version   = header.value(QStringLiteral("version")).toString();
-    info.name      = header.value(QStringLiteral("name")).toString();
-    info.numParams = header.value(QStringLiteral("num_param")).toInt();
+    info.setPlatform(header.value(QStringLiteral("platform")).toString());
+    info.setModule(header.value(QStringLiteral("module")).toString());
+    info.setApi(header.value(QStringLiteral("api")).toString());
+    info.setDevId(header.value(QStringLiteral("dev_id")).toInt());
+    info.setPrgId(header.value(QStringLiteral("prg_id")).toInt());
+    info.setVersion(header.value(QStringLiteral("version")).toString());
+    info.setName(header.value(QStringLiteral("name")).toString());
+    info.setNumParams(header.value(QStringLiteral("num_param")).toInt());
 
     // params is an array of arrays: [["name", min, max, "type"], …]
     const QJsonArray paramsArr = header.value(QStringLiteral("params")).toArray();
@@ -104,14 +104,14 @@ UnitInfo UnitHeaderParser::parse(const QString &filePath)
         if (pa.size() < 4) continue;
 
         UnitParam p;
-        p.name = pa.at(0).toString();
-        p.min  = pa.at(1).toInt();
-        p.max  = pa.at(2).toInt();
-        p.type = pa.at(3).toString();
-        info.params.append(p);
+        p.setName(pa.at(0).toString());
+        p.setMin(pa.at(1).toInt());
+        p.setMax(pa.at(2).toInt());
+        p.setType(pa.at(3).toString());
+        info.appendParam(p);
     }
 
-    info.isValid = true;
+    info.setValid(true);
     return info;
 }
 

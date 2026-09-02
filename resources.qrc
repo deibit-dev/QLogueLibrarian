@@ -3,7 +3,7 @@
         <file>qml/Main.qml</file>
         <file>qml/MidiSection.qml</file>
         <file>qml/LoadSection.qml</file>
-        <file>qml/PluginLibrary.qml</file>
+        <file>qml/UnitLibrary.qml</file>
         <file>qml/MetaPanel.qml</file>
         <file>qml/LogPanel.qml</file>
     </qresource>

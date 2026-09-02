@@ -19,11 +19,18 @@ ApplicationWindow {
                 id: cliPathField
                 Layout.fillWidth: true
                 text: App.cliPath
-                onTextChanged: App.cliPath = text
+                // The model is read-only for the view: the user's edit is
+                // committed as a command on focus-out/Enter, never written
+                // to Logic directly.
+                onEditingFinished: Controller.setCliPath(text)
             }
             Button {
                 text: "..."
-                onClicked: App.browseCliPath()
+                onClicked: {
+                    var f = Dialogs.pickExecutable()
+                    if (f !== "")
+                        Controller.setCliPath(f)
+                }
             }
         }
     }
@@ -44,11 +51,12 @@ ApplicationWindow {
 
         MidiSection   { Layout.fillWidth: true }
         LoadSection   { Layout.fillWidth: true }
-        PluginLibrary { Layout.fillWidth: true; Layout.fillHeight: true }
+        UnitLibrary { Layout.fillWidth: true; Layout.fillHeight: true }
         LogPanel      { Layout.fillWidth: true; Layout.preferredHeight: 120 }
     }
 
-    // keep cliPath field in sync if changed from C++ (e.g. browseCliPath)
+    // keep cliPath field in sync when the controller persists a new path
+    // (e.g. from the Browse dialog), in case a previous edit broke the binding
     Connections {
         target: App
         function onCliPathChanged() { cliPathField.text = App.cliPath }

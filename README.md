@@ -19,29 +19,34 @@ A minimal cross-platform GUI wrapper for KORG logue-sdk/logue-cli tools, built w
 |---|---|
 | **Probe MIDI ports** | Runs `logue-cli probe -l`, parses the output and populates In/Out port selectors. Ports containing `SOUND` are auto-selected (these are the correct SysEx ports for prologue / minilogue xd). |
 | **Upload unit files** | Lets you browse for a `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (or other logue unit format), then runs `logue-cli load -u <file> -i <in> -o <out>`. Parses the output to determine success (platform, module, CRC32). |
-| **Plugin Library browser** | Point the app at a directory containing `.xxxunit` files. All plugins are listed and selecting one displays its metadata and automatically fills the Load Unit path for quick upload. |
+| **Unit Library browser** | Point the app at a directory containing `.xxxunit` files. All units are listed and selecting one displays its metadata and automatically fills the Load Unit path for quick upload. |
 | **Manifest metadata parsing** | Unit files (`.prlgunit`, `.mnlgxdunit`, etc.) are ZIP archives containing a `manifest.json`. The app extracts it via the bundled **miniz** library (vendored as a git submodule) and displays: platform, module, API version, developer/program IDs, unit name, and a full parameter table (name, min, max, type). |
-| **Persistent settings** | The path to the `logue-cli` executable and the plugin library directory are saved via `QSettings` and restored on next launch. The plugin directory is automatically scanned on startup. |
+| **Persistent settings** | The path to the `logue-cli` executable and the unit library directory are saved via `QSettings` and restored on next launch. The unit directory is automatically scanned on startup. |
 | **Live log** | All `logue-cli` stdout/stderr output is shown in a log panel inside the application. |
 
 ## Project Structure
 
 ```
 src/
-├── main.cpp                         # Application entry point (QQmlApplicationEngine)
+├── main.cpp                         # Application entry point
 ├── model/
+│   ├── MidiPort.h                   # MIDI port struct
 │   ├── KorgEnums.h                  # Unit file extension filters
-│   ├── UnitInfo.h/.cpp              # Data model for unit metadata (from manifest.json)
-│   └── PluginListModel.h/.cpp       # QAbstractListModel exposed to QML ListView
-├── controller/
+│   └── UnitInfo.h/.cpp              # Unit metadata structs (from manifest.json, QML value types)
+├── logic/
+│   ├── Logic.h/.cpp                 # Application state + business orchestrator (the Model), exposed to QML
 │   ├── LogueCLIWrapper.h/.cpp       # QProcess wrapper for logue-cli
-│   ├── UnitHeaderParser.h/.cpp      # Extracts & parses manifest.json from .xxxunit ZIP files
-│   └── AppController.h/.cpp         # C++ backend (Q_PROPERTY / Q_INVOKABLE) exposed to QML
+│   └── UnitHeaderParser.h/.cpp      # Extracts & parses manifest.json from .xxxunit ZIP files
+├── controller/
+│   └── AppController.h/.cpp         # Thin QML gateway (validation, translation, no state)
+├── view/
+│   ├── ViewState.h/.cpp             # View-owned selection / presentation state
+│   └── Dialogs.h/.cpp               # Native file/folder dialog helper
 └── qml/
     ├── Main.qml                     # Root ApplicationWindow
     ├── MidiSection.qml              # Probe + In/Out ComboBoxes
     ├── LoadSection.qml              # Unit file picker + slot + upload button
-    ├── PluginLibrary.qml            # Directory picker + SplitView (list + metadata)
+    ├── UnitLibrary.qml              # Directory picker + SplitView (list + metadata)
     ├── MetaPanel.qml                # Metadata grid + parameter table
     └── LogPanel.qml                 # Live log (read-only)
 ```
@@ -164,29 +169,34 @@ Interfaz gráfica minimalista y multiplataforma que actúa como wrapper de las h
 |---|---|
 | **Detección de puertos MIDI** | Ejecuta `logue-cli probe -l`, parsea la salida y llena los selectores de puertos In/Out. Los puertos que contienen `SOUND` se seleccionan automáticamente (son los puertos SysEx correctos para prologue / minilogue xd). |
 | **Subida de archivos unit** | Permite seleccionar un archivo `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (u otro formato logue), luego ejecuta `logue-cli load -u <archivo> -i <in> -o <out>`. Parsea la salida para determinar éxito (plataforma, módulo, CRC32). |
-| **Explorador de librería de plugins** | Apuntá la app a un directorio que contenga archivos `.xxxunit`. Todos los plugins se listan y al seleccionar uno se muestran sus metadatos y se autocompleta la ruta en Load Unit para subirlo rápidamente. |
+| **Explorador de librería de units** | Apuntá la app a un directorio que contenga archivos `.xxxunit`. Todas las units se listan y al seleccionar uno se muestran sus metadatos y se autocompleta la ruta en Load Unit para subirlo rápidamente. |
 | **Parseo de metadatos (manifest.json)** | Los archivos unit (`.prlgunit`, `.mnlgxdunit`, etc.) son archivos ZIP que contienen un `manifest.json`. La app lo extrae con la librería **miniz** (incluida como git submodule) y muestra: plataforma, módulo, versión de API, IDs de desarrollador/programa, nombre de la unidad, y tabla completa de parámetros (nombre, mín, máx, tipo). |
-| **Configuración persistente** | La ruta al ejecutable `logue-cli` y el directorio de la librería de plugins se guardan con `QSettings` y se restauran al reiniciar. El directorio de plugins se escanea automáticamente al iniciar. |
+| **Configuración persistente** | La ruta al ejecutable `logue-cli` y el directorio de la librería de units se guardan con `QSettings` y se restauran al reiniciar. El directorio de units se escanea automáticamente al iniciar. |
 | **Log en vivo** | Toda la salida stdout/stderr de `logue-cli` se muestra en un panel de log dentro de la aplicación. |
 
 ## Estructura del Proyecto
 
 ```
 src/
-├── main.cpp                         # Punto de entrada (QQmlApplicationEngine)
+├── main.cpp                         # Punto de entrada
 ├── model/
+│   ├── MidiPort.h                   # Struct de puerto MIDI
 │   ├── KorgEnums.h                  # Filtros de extensiones de archivos unit
-│   ├── UnitInfo.h/.cpp              # Modelo de datos para metadatos (desde manifest.json)
-│   └── PluginListModel.h/.cpp       # QAbstractListModel expuesto al ListView de QML
-├── controller/
+│   └── UnitInfo.h/.cpp              # Structs de metadatos de unidad (desde manifest.json, value types QML)
+├── logic/
+│   ├── Logic.h/.cpp                 # Estado de la aplicación + orquestador (el Modelo), expuesto a QML
 │   ├── LogueCLIWrapper.h/.cpp       # Wrapper de QProcess para logue-cli
-│   ├── UnitHeaderParser.h/.cpp      # Extrae y parsea manifest.json de archivos ZIP .xxxunit
-│   └── AppController.h/.cpp         # Backend C++ (Q_PROPERTY / Q_INVOKABLE) expuesto a QML
+│   └── UnitHeaderParser.h/.cpp      # Extrae y parsea manifest.json de archivos ZIP .xxxunit
+├── controller/
+│   └── AppController.h/.cpp         # Gateway QML delgado (validación, traducción, sin estado)
+├── view/
+│   ├── ViewState.h/.cpp             # Estado de selección / presentación (de la vista)
+│   └── Dialogs.h/.cpp               # Helper de diálogos nativos de archivo/carpeta
 └── qml/
     ├── Main.qml                     # ApplicationWindow raíz
     ├── MidiSection.qml              # Probe + ComboBoxes In/Out
     ├── LoadSection.qml              # Selector de archivo + slot + botón Upload
-    ├── PluginLibrary.qml            # Selector de directorio + SplitView (lista + metadatos)
+    ├── UnitLibrary.qml              # Selector de directorio + SplitView (lista + metadatos)
     ├── MetaPanel.qml                # Grilla de metadatos + tabla de parámetros
     └── LogPanel.qml                 # Log en vivo (solo lectura)
 ```
