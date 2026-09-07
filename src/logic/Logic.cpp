@@ -37,6 +37,7 @@ Logic::Logic(QObject *parent)
 void Logic::probe() {
     clearPorts();
     m_cli.probe(m_cliPath);
+    emit probeStarted();   // the process was actually launched
 }
 
 bool Logic::loadUnit(const QString &unitPath, int slot, int inRow, int outRow) {
@@ -49,6 +50,7 @@ bool Logic::loadUnit(const QString &unitPath, int slot, int inRow, int outRow) {
     const int slotArg = (slot > 0) ? slot : -1;   // 0 = auto
 
     m_cli.loadUnit(m_cliPath, unitPath, inIdx, outIdx, slotArg);
+    emit loadStarted();   // the process was actually launched
     return true;
 }
 

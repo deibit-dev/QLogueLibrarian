@@ -7,6 +7,8 @@
 
 #include "model/MidiPort.h"
 
+class QProcess;
+
 namespace qlogue {
 
 /// Result of a `logue-cli load` invocation.
@@ -37,6 +39,12 @@ signals:
     void errorOccurred(QString message);
 
 private:
+    /// When the binary cannot be started (e.g. wrong cliPath) QProcess emits
+    /// errorOccurred(FailedToStart) but NOT finished. Without handling this
+    /// the UI would wait forever for a result, so we surface it as
+    /// errorOccurred().
+    void connectStartError(QProcess *proc);
+
     static QVector<MidiPort> parseProbeOutput(const QString &text);
     static LoadResult        parseLoadOutput(const QString &text, int exitCode);
 };

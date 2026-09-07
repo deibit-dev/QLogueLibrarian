@@ -14,7 +14,89 @@ El codigo fuente esta disponible en [GitHub](https://github.com/david-lafontaine
 
 ---
 
+## La cuestión de fondo: ¿qué variante de MVC?
+
+"Usamos MVC" no dice casi nada: bajo la misma sigla conviven el MVC clásico
+(Smalltalk), el MVP y variantes que solo comparten la separación
+Modelo/Vista/Controlador. La pregunta que realmente importa en Qt/QML es:
+**¿qué debe hacer el "controller" y qué puede leer/escribir la vista?** Las
+opciones concretas que se evaluaron:
+
+- **A. Controller mediador total (MVP / *passive view*)**: el controller
+  oculta el modelo; la vista es tonta y pide todo por métodos. Es la lectura
+  más común del diagrama "View → Controller → Model".
+- **B. MVC clásico**: la vista lee el modelo directamente (Observer) y el
+  controller traduce la *intención del usuario* en mutaciones. El controller
+  no media lecturas; nadie conoce al controller.
+- **C. MVVM/ViewModel**: un objeto expone estado observable + comandos a los
+  que la vista se suscribe.
+- **D. God object**: un único `QObject` con estado, propiedades, orquestación
+  y hasta textos de UI. Fue el punto de partida real del proyecto y lo que se
+  corrigió.
+
+### Por qué se descartó A (y por qué en QML A degenera en C)
+
+La vista QML no "pinta por código": son **bindings declarativos**
+(`property X: App.algo`) reactivos a `NOTIFY`. Para que la vista fuera tonta,
+el controller debería re-exponer cada pedazo de estado como `Q_PROPERTY` — es
+decir, **duplicar el modelo** y convertirse en un ViewModel con otro nombre.
+Además, cada acceso cruza la frontera C++/QML vía `QVariant`; leer directo de
+un objeto tipado es más simple y barato que hacer round-trips por un
+intermediario. El binding declarativo ya cumple el rol del Observer: no hace
+falta que nadie le "empuje" la vista.
+
+### Por qué la respuesta final está entre B y C, con matices
+
+Qt ya separa por mecanismo nativo lo que B separa conceptualmente: **estado
+observable** (`Q_PROPERTY` + `NOTIFY`) por un lado y **acciones**
+(`Q_INVOKABLE`/slots) por el otro. En Qt el "controller" no media lecturas:
+media la intención (probe, escanear, subir). El resultado concreto del
+proyecto fue:
+
+1. **Modelo observable y de solo lectura para QML.** `Logic` (ex `AppState`)
+   expone 7 `Q_PROPERTY` **sin `WRITE`** (`cliPath`, `unitDir`, `inPorts`,
+   `outPorts`, `library`, `statusText`, `logText`). La vista bindea para
+   mostrar; no puede modificar el modelo.
+2. **Un solo escritor.** El store y el orquestador se fusionaron en un único
+   objeto (`Logic`): el que posee el estado es el que lo muta
+   (`probe`, `scanUnits`, `loadUnit`, `setCliPath`, `setUnitDir`). Así
+   desaparece la ambigüedad de "¿quién escribe el modelo?" que existía cuando
+   el estado y la orquestación vivían en dos QObjects distintos.
+3. **Selección y presentación → la vista.** `ViewState` guarda qué unit/puerto
+   está elegido, el target de carga y el slot. El modelo no guarda selección.
+4. **`AppController` como gateway delgado.** Es el *único camino* por el que
+   la vista comanda: valida parámetros, delega en `Logic` y traduce las
+   señales de operación de `Logic` (`probeFinished`, `scanFinished`,
+   `loadFinished`, `errorOccurred`) a los textos de `statusText`/`logText`.
+   Las cadenas de usuario viven acá, no en la lógica.
+5. **Tipos encapsulados como value types.** Los metadatos de una unit viajan
+   como `UnitInfo`/`UnitParam` (`Q_GADGET` registrados en `main.cpp`): una
+   unit entra y sale del QML como un solo valor tipado, no como una decena de
+   propiedades sueltas (`metaName`, `metaPlatform`, ...) que duplicaban datos.
+6. **Separación física por capa.** `model/` (tipos puros), `logic/` (`Logic` +
+   `LogueCLIWrapper` + `UnitHeaderParser`), `controller/` (solo
+   `AppController`) y `view/` (`ViewState`, `Dialogs`). `App` apunta a
+   `Logic`; `Controller` a `AppController`.
+
+### La decisión, en una frase
+
+La arquitectura final es un híbrido consciente: **MVC clásico en la dirección
+de lectura** (la vista lee el modelo; el binding reemplaza al Observer),
+**command gateway en la dirección de escritura** (`AppController` como único
+camino QML→modelo) y **presentación separada del dominio** (selección en
+`ViewState`, textos de UI en el gateway). Es la variante que menos pelea con
+el paradigma declarativo de QML y la que preserva la regla crítica del
+proyecto: *el modelo no se puede modificar desde la vista*.
+
+---
+
 ## Decisiones de diseno
+
+> Las secciones numeradas siguientes documentan decisiones tomadas durante el
+> desarrollo e incluyen fragmentos del diseño inicial (antes del refactor de
+> arquitectura). El estado final de la separación Modelo/Controlador/Vista es
+> el que describe la sección anterior ("¿qué variante de MVC?"); donde haya
+> conflicto, manda esa sección.
 
 ### 1. Wrapper sobre logue-cli, no acceso directo al hardware
 
@@ -46,39 +128,43 @@ void LogueCLIWrapper::probe() {
 **Desventaja:**
 - Dependencia de que el usuario tenga `logue-cli` instalado separadamente (documentado explicitamente en el README)
 
-### 2. Arquitectura MVC adaptada a Qt/QML
+### 2. Arquitectura final por capas
 
 ```
 src/
-├── model/           # Datos puros (UnitInfo, PluginListModel)
-├── controller/      # Logica de negocio (AppController, LogueCLIWrapper, UnitHeaderParser)
-└── qml/            # Vista declarativa (Main.qml, MidiSection.qml, etc.)
+├── model/       # Tipos puros: UnitInfo/UnitParam (value types Q_GADGET), MidiPort, KorgEnums
+├── logic/       # Logic (modelo observable + único orquestador), LogueCLIWrapper, UnitHeaderParser
+├── controller/  # AppController (gateway QML delgado)
+├── view/        # ViewState (selección), Dialogs
+└── qml/         # Vista declarativa (Main.qml, UnitLibrary.qml, MetaPanel.qml, ...)
 ```
 
-- **`UnitInfo`**: plain data struct sin metodos. Solo contiene los campos extraidos del `manifest.json` y un flag `isValid`.
-- **`PluginListModel`**: `QAbstractListModel` expuesto a QML con roles custom (`NameRole`, `FilePathRole`, `IsValidRole`).
-- **`AppController`**: single source of truth. Expone propiedades y slots a QML via `Q_PROPERTY` y `Q_INVOKABLE`.
+- **`Logic`** (ex `AppState`): estado observable read-only para QML (7
+  `Q_PROPERTY` sin `WRITE`) **y** orquestador único de negocio (probe/scan/
+  load/settings). Se muta a sí mismo: no hay ambigüedad sobre quién escribe el
+  modelo. Posee `LogueCLIWrapper` y emite señales de operación
+  (`probeFinished`, `scanFinished`, `loadFinished`, `errorOccurred`).
+- **`UnitInfo`/`UnitParam`**: value types (`Q_GADGET`) registrados en QML.
+- **`AppController`**: único camino QML→modelo. Valida, delega en `Logic` y
+  traduce sus señales de operación a `statusText`/`logText`.
+- **`ViewState`**: selección y valores de formulario (qué unit/puerto está
+  elegido, slot, target de carga). Es estado de la vista, no del modelo.
 
-### 3. Frontera C++/QML via context property
+### 3. Frontera C++/QML via context properties
 
 ```cpp
-// main.cpp:14
-engine.rootContext()->setContextProperty(QStringLiteral("App"), &controller);
+// main.cpp
+engine.rootContext()->setContextProperty("App",        &logic);
+engine.rootContext()->setContextProperty("Controller", &controller);
+engine.rootContext()->setContextProperty("ViewState",  &viewState);
+engine.rootContext()->setContextProperty("Dialogs",    &dialogs);
 ```
 
-Un solo objeto `AppController` registrado como `App` en el contexto QML. Toda la comunicacion bidireccional va por ahi:
-
-```cpp
-// AppController.h:16-42 (fragmento)
-Q_PROPERTY(QString cliPath    READ cliPath    WRITE setCliPath    NOTIFY cliPathChanged)
-Q_PROPERTY(QStringList inPorts  READ inPorts  NOTIFY inPortsChanged)
-// ...
-Q_INVOKABLE void probe();
-Q_INVOKABLE void loadUnit();
-Q_INVOKABLE void browseCliPath();
-```
-
-QML liga directo a las propiedades y llama metodos `Q_INVOKABLE` sin necesidad de bridges adicionales.
+Hay **cuatro** objetos de contexto con roles distintos: `App` es el modelo
+(read-only), `Controller` es el gateway de comandos, `ViewState` es la
+selección de la vista y `Dialogs` es el helper de diálogos. QML liga a las
+propiedades read-only de `App` y llama a los `Q_INVOKABLE` de `Controller`; no
+puede modificar el modelo directamente.
 
 ### 4. Namespace `qlogue` para evitar contaminar el global namespace
 

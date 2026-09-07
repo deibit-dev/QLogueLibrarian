@@ -9,6 +9,16 @@ AppController::AppController(Logic *logic, QObject *parent)
 {
     // Translate Logic's business outcomes into presentation (status/log).
     // Logic stays free of user-facing strings; it only reports typed results.
+    // The in-progress messages react to Logic's "started" signals, which are
+    // emitted only when the async process actually launches.
+    connect(m_logic, &Logic::probeStarted, this, [this] {
+        m_logic->setStatus(tr("Probing…"));
+    });
+
+    connect(m_logic, &Logic::loadStarted, this, [this] {
+        m_logic->setStatus(tr("Uploading…"));
+    });
+
     connect(m_logic, &Logic::probeFinished, this, [this](int portCount) {
         m_logic->setStatus(tr("Found %1 port(s)").arg(portCount));
         m_logic->appendLog(tr("── Probe: %1 port(s) detected ──").arg(portCount));
@@ -42,7 +52,8 @@ AppController::AppController(Logic *logic, QObject *parent)
 // ─── Invokable actions ──────────────────────────────────────────────────────
 
 void AppController::probe() {
-    m_logic->setStatus(tr("Probing…"));
+    // No optimistic status here: "Probing…" is set when Logic emits
+    // probeStarted (i.e. the process really launched).
     m_logic->probe();
 }
 
@@ -59,8 +70,9 @@ void AppController::loadUnit(const QString &unitPath, int slot,
     if (unitPath.isEmpty())
         return;
 
-    if (m_logic->loadUnit(unitPath, slot, inRow, outRow))
-        m_logic->setStatus(tr("Uploading…"));
+    // "Uploading…" is set on Logic::loadStarted, only when the upload
+    // actually launched.
+    m_logic->loadUnit(unitPath, slot, inRow, outRow);
 }
 
 } // namespace qlogue

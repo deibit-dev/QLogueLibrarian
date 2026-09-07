@@ -8,10 +8,23 @@ namespace qlogue {
 LogueCLIWrapper::LogueCLIWrapper(QObject *parent)
     : QObject(parent) {}
 
+void LogueCLIWrapper::connectStartError(QProcess *proc) {
+    connect(proc, qOverload<QProcess::ProcessError>(&QProcess::errorOccurred),
+            this, [this, proc](QProcess::ProcessError err) {
+        if (err != QProcess::FailedToStart)
+            return;   // crashes/timeouts surface via finished()/exit code
+        emit errorOccurred(
+            QStringLiteral("Failed to start %1: %2")
+                .arg(proc->program(), proc->errorString()));
+        proc->deleteLater();
+    });
+}
+
 // ── probe -l ────────────────────────────────────────────────────────────────
 
 void LogueCLIWrapper::probe(const QString &cliPath) {
     auto *proc = new QProcess(this);
+    connectStartError(proc);
     connect(proc, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
             this, [this, proc](int exitCode, QProcess::ExitStatus) {
         auto out = QString::fromUtf8(proc->readAllStandardOutput());
@@ -63,6 +76,7 @@ QVector<MidiPort> LogueCLIWrapper::parseProbeOutput(const QString &text) {
 void LogueCLIWrapper::loadUnit(const QString &cliPath, const QString &unitPath,
                                int inPort, int outPort, int slot) {
     auto *proc = new QProcess(this);
+    connectStartError(proc);
     connect(proc, qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
             this, [this, proc](int exitCode, QProcess::ExitStatus) {
         auto combined = QString::fromUtf8(proc->readAllStandardOutput())

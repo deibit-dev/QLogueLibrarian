@@ -97,8 +97,13 @@ signals:
     void statusTextChanged();
     void logTextChanged();
 
-    // operation outcomes — Logic does NOT compose user text; AppController
-    // translates these into statusText/logText.
+    // operation lifecycle/outcomes — Logic does NOT compose user text;
+    // AppController translates these into statusText/logText. The "started"
+    // signals are emitted only when the operation actually launches, so the
+    // in-progress status is driven by the business execution, not by the
+    // gateway optimistically anticipating it.
+    void probeStarted();
+    void loadStarted();
     void probeFinished(int portCount);
     void scanFinished(int unitCount);
     void loadFinished(qlogue::LoadResult result);
