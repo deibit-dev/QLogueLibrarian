@@ -60,7 +60,7 @@ private:
     QString m_unitPath;        // upload target file (browse or library pick)
     int m_inIndex = -1;        // chosen row in App.inPorts
     int m_outIndex = -1;       // chosen row in App.outPorts
-    int m_slot = 0;            // 0 = auto
+    int m_slot = -1;           // -1 = auto (no -s); 0..15 = explicit slot
 };
 
 } // namespace qlogue

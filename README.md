@@ -18,7 +18,7 @@ A minimal cross-platform GUI wrapper for KORG logue-sdk/logue-cli tools, built w
 | Feature | Description |
 |---|---|
 | **Probe MIDI ports** | Runs `logue-cli probe -l`, parses the output and populates In/Out port selectors. Ports containing `SOUND` are auto-selected (these are the correct SysEx ports for prologue / minilogue xd). |
-| **Upload unit files** | Lets you browse for a `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (or other logue unit format), then runs `logue-cli load -u <file> -i <in> -o <out>`. Parses the output to determine success (platform, module, CRC32). |
+| **Upload unit files** | Lets you browse for a `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (or other logue unit format), then runs `logue-cli load -u <file> -i <in> -o <out>`. Parses the output to determine success (platform, module, CRC32). Payloads above the ALSA sequencer limit (~2400 B) are re-sent over a rawmidi port with `amidi`, resending the payload SysEx dumped after the `size:` line (the `logue_load.py` / `upload_effect.sh` workaround). |
 | **Unit Library browser** | Point the app at a directory containing `.xxxunit` files. All units are listed and selecting one displays its metadata and automatically fills the Load Unit path for quick upload. |
 | **Manifest metadata parsing** | Unit files (`.prlgunit`, `.mnlgxdunit`, etc.) are ZIP archives containing a `manifest.json`. The app extracts it via the bundled **miniz** library (vendored as a git submodule) and displays: platform, module, API version, developer/program IDs, unit name, and a full parameter table (name, min, max, type). |
 | **Persistent settings** | The path to the `logue-cli` executable and the unit library directory are saved via `QSettings` and restored on next launch. The unit directory is automatically scanned on startup. |
@@ -81,19 +81,19 @@ The only runtime dependency is `logue-cli` itself (see below). The **miniz** lib
 **Debian / Ubuntu:**
 
 ```bash
-sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev
+sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev alsa-utils
 ```
 
 **Fedora:**
 
 ```bash
-sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtdeclarative-devel
+sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtdeclarative-devel alsa-utils
 ```
 
 **Arch Linux:**
 
 ```bash
-sudo pacman -S base-devel cmake qt6-base qt6-declarative
+sudo pacman -S base-devel cmake qt6-base qt6-declarative alsa-utils
 ```
 
 ### Installing logue-cli
@@ -168,7 +168,7 @@ Interfaz gráfica minimalista y multiplataforma que actúa como wrapper de las h
 | Función | Descripción |
 |---|---|
 | **Detección de puertos MIDI** | Ejecuta `logue-cli probe -l`, parsea la salida y llena los selectores de puertos In/Out. Los puertos que contienen `SOUND` se seleccionan automáticamente (son los puertos SysEx correctos para prologue / minilogue xd). |
-| **Subida de archivos unit** | Permite seleccionar un archivo `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (u otro formato logue), luego ejecuta `logue-cli load -u <archivo> -i <in> -o <out>`. Parsea la salida para determinar éxito (plataforma, módulo, CRC32). |
+| **Subida de archivos unit** | Permite seleccionar un archivo `.prlgunit`, `.mnlgxdunit`, `.ntkdigunit` (u otro formato logue), luego ejecuta `logue-cli load -u <archivo> -i <in> -o <out>`. Parsea la salida para determinar éxito (plataforma, módulo, CRC32). Los payloads que superan el límite del puerto secuenciador ALSA (~2400 B) se reenvían por un puerto rawmidi con `amidi`, reenviando el payload SysEx que vuelca después de la línea `size:` (workaround de `logue_load.py` / `upload_effect.sh`). |
 | **Explorador de librería de units** | Apuntá la app a un directorio que contenga archivos `.xxxunit`. Todas las units se listan y al seleccionar uno se muestran sus metadatos y se autocompleta la ruta en Load Unit para subirlo rápidamente. |
 | **Parseo de metadatos (manifest.json)** | Los archivos unit (`.prlgunit`, `.mnlgxdunit`, etc.) son archivos ZIP que contienen un `manifest.json`. La app lo extrae con la librería **miniz** (incluida como git submodule) y muestra: plataforma, módulo, versión de API, IDs de desarrollador/programa, nombre de la unidad, y tabla completa de parámetros (nombre, mín, máx, tipo). |
 | **Configuración persistente** | La ruta al ejecutable `logue-cli` y el directorio de la librería de units se guardan con `QSettings` y se restauran al reiniciar. El directorio de units se escanea automáticamente al iniciar. |
@@ -226,24 +226,26 @@ src/
 
 ### Dependencias de Ejecución
 
-La única dependencia de ejecución es `logue-cli` (ver abajo). La librería **miniz**, usada para leer los ZIP `.xxxunit`, está **incluida** en este repositorio y se compila dentro de la aplicación — no se requiere ninguna herramienta externa de ZIP/unzip.
+La única dependencia de ejecución obligatoria es `logue-cli` (ver abajo). La librería **miniz**, usada para leer los ZIP `.xxxunit`, está **incluida** en este repositorio y se compila dentro de la aplicación — no se requiere ninguna herramienta externa de ZIP/unzip.
+
+Para subir **payloads grandes**, que superan el límite del puerto secuenciador ALSA (~2400 B), la app reenvía el payload SysEx por rawmidi con **`amidi`** (paquete `alsa-utils`). Es opcional: solo se necesita si subís units grandes; los units chicos se suben directamente con `logue-cli`.
 
 **Debian / Ubuntu:**
 
 ```bash
-sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev
+sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev alsa-utils
 ```
 
 **Fedora:**
 
 ```bash
-sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtdeclarative-devel
+sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtdeclarative-devel alsa-utils
 ```
 
 **Arch Linux:**
 
 ```bash
-sudo pacman -S base-devel cmake qt6-base qt6-declarative
+sudo pacman -S base-devel cmake qt6-base qt6-declarative alsa-utils
 ```
 
 ### Instalación de logue-cli

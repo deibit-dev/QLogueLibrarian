@@ -35,12 +35,12 @@ GroupBox {
         Label { text: "Slot:" }
         SpinBox {
             id: slotSpin
-            from: 1
-            to: 8
+            from: -1
+            to: 15
             value: ViewState.slot
             onValueChanged: ViewState.slot = value
             textFromValue: function(value) {
-                return value === 0 ? "Auto" : value.toString()
+                return value < 0 ? "Auto" : value.toString()
             }
         }
 

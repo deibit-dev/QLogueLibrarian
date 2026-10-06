@@ -47,7 +47,9 @@ bool Logic::loadUnit(const QString &unitPath, int slot, int inRow, int outRow) {
     const int outIdx = resolveOutPort(outRow);
     if (inIdx < 0 || outIdx < 0) return false;
 
-    const int slotArg = (slot > 0) ? slot : -1;   // 0 = auto
+    // slot < 0 means "auto" (let logue-cli pick the first free slot); 0..15 is
+    // an explicit slot (0 must be forwarded — effects use slots 0..15).
+    const int slotArg = (slot >= 0) ? slot : -1;
 
     m_cli.loadUnit(m_cliPath, unitPath, inIdx, outIdx, slotArg);
     emit loadStarted();   // the process was actually launched

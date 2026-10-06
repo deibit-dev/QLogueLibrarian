@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 #include "model/MidiPort.h"
@@ -21,6 +22,12 @@ struct LoadResult {
 
 /// Thin stateless wrapper around the logue-cli binary.
 /// All heavy work runs via QProcess – signals report completion.
+///
+/// Uploads run `logue-cli load -d`, which prints the SysEx payload it is
+/// trying to send. Small payloads upload directly through logue-cli; payloads
+/// above the ALSA sequencer message limit (~2400 B) fail with a timeout there,
+/// so the printed SysEx is resent over a rawmidi port with `amidi`
+/// (reimplementation of the logue_load.py / upload_effect.sh workaround).
 class LogueCLIWrapper : public QObject {
     Q_OBJECT
 public:
@@ -29,7 +36,8 @@ public:
     /// Run `probe -l` and parse available MIDI ports.
     void probe(const QString &cliPath);
 
-    /// Run `load -u <unitPath> -i <inPort> -o <outPort> [-s <slot>]`
+    /// Run `load -d -u <unitPath> -i <inPort> -o <outPort> [-s <slot>]`,
+    /// falling back to a rawmidi (amidi) resend for large payloads.
     void loadUnit(const QString &cliPath, const QString &unitPath,
                   int inPort, int outPort, int slot = -1);
 
@@ -47,6 +55,19 @@ private:
 
     static QVector<MidiPort> parseProbeOutput(const QString &text);
     static LoadResult        parseLoadOutput(const QString &text, int exitCode);
+
+    /// Extract the SysEx payload that `logue-cli load -d` dumped *after* its
+    /// "size:" line. The `>>>`/`<<<` pairs before it are the device handshake
+    /// and must NOT be replayed; only the payload is resent over rawmidi
+    /// (this mirrors logue_load.py exactly).
+    static QStringList extractSysexMessages(const QString &stdoutText);
+
+    /// Drop the dump lines (`>>> { ... }` / `<<< { ... }`) so the log view is
+    /// not flooded with thousands of hex bytes.
+    static QString stripSysexDump(const QString &text);
+
+    /// Detect a suitable rawmidi port via `amidi -l` (empty if none/ambiguous).
+    static QString detectAmidiPort();
 };
 
 } // namespace qlogue

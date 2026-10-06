@@ -46,6 +46,11 @@ Todo el código vive en el namespace `qlogue`. Reglas de oro:
   **stateless** que envuelve `logue-cli` vía `QProcess`. Asíncrono: emite
   `probeFinished(QVector<MidiPort>)`, `loadFinished(LoadResult)`,
   `errorOccurred(QString)`. También define `LoadResult`.
+  Para el upload corre `logue-cli load -d` (que vuelca el handshake y, tras
+  la línea `size:`, el payload SysEx); si el unit supera el límite del puerto
+  secuenciador ALSA (~2400 B) y falla, reenvía **solo ese payload** por
+  rawmidi con **`amidi`** (workaround de `logue_load.py`/`upload_effect.sh`),
+  detectando el puerto vía `amidi -l`.
 - **`UnitHeaderParser`** (estática, `UnitHeaderParser.h/.cpp`):
   `parse(QString) → UnitInfo` (extrae `manifest.json` del ZIP con **miniz**).
   Único escritor de `UnitInfo` (usa sus setters).
@@ -189,5 +194,8 @@ AppController (gateway) ───────delega────▶ Logic ──p
 5. **Carga (upload)**: QML llama `Controller.loadUnit(ViewState.unitPath,
    ViewState.slot, ViewState.inIndex, ViewState.outIndex)`. `AppController`
    valida, llama `Logic::loadUnit` (resuelve fila → índice MIDI crudo) y pone
-   "Uploading…". Al terminar, `loadFinished(LoadResult)` → `AppController`
-   apenda `rawOutput` al log y actualiza el estado (✔/✘).
+   "Uploading…". `LogueCLIWrapper` corre `logue-cli load -d`; si el unit es
+   chico sube directo; si supera ~2400 B y falla, reenvía el payload SysEx
+   (el volcado posterior a `size:`) por rawmidi con `amidi`. Al terminar,
+   `loadFinished(LoadResult)` → `AppController` apenda `rawOutput` al log y
+   actualiza el estado (✔/✘).
